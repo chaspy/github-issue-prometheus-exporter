@@ -62,6 +62,11 @@ func snapshot() error {
 		return fmt.Errorf("failed to read Datadog Config: %w", err)
 	}
 
+	label, err := getLabelForFilter()
+	if err != nil {
+		return fmt.Errorf("failed to get label: %w", err)
+	}
+
 	repositories, err := getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub repository name: %w", err)
@@ -69,7 +74,7 @@ func snapshot() error {
 
 	repositoryList := parseRepositories(repositories)
 
-	issues, err := getIssues(githubToken, repositoryList)
+	issues, err := getIssues(githubToken, repositoryList, label)
 	if err != nil {
 		return fmt.Errorf("failed to get Issues: %w", err)
 	}
@@ -106,7 +111,7 @@ func readGithubConfig() (string, error) {
 	return githubToken, nil
 }
 
-func getIssues(githubToken string, githubRepositories []string) ([]*github.Issue, error) {
+func getIssues(githubToken string, githubRepositories []string, label string) ([]*github.Issue, error) {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: githubToken},
 	)
@@ -122,7 +127,7 @@ func getIssues(githubToken string, githubRepositories []string) ([]*github.Issue
 		org := repo[0]
 		name := repo[1]
 		issueListByRepoOptions := github.IssueListByRepoOptions{
-			Labels: []string{"SRE"},
+			Labels: []string{label},
 		}
 		issuesInRepo, _, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
 		if err != nil {
@@ -142,6 +147,15 @@ func getRepositories() (string, error) {
 	}
 
 	return githubRepositories, nil
+}
+
+func getLabelForFilter() (string, error) {
+	githubLabel := os.Getenv("GITHUB_LABEL")
+	if len(githubLabel) == 0 {
+		return "", fmt.Errorf("missing environment variable: GITHUB_LABEL")
+	}
+
+	return githubLabel, nil
 }
 
 func parseRepositories(repositories string) []string {
