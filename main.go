@@ -16,30 +16,29 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type PR struct {
-	Number             *int
-	Labels             []*github.Label
-	User               *string
-	RequestedReviewers []*github.User
-	Repo               string
+type Issue struct {
+	Number *int
+	Labels []github.Label
+	User   *string
+	Repo   string
 }
 
 var (
 	//nolint:gochecknoglobals
-	PullRequestCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: "github_pr",
+	IssueCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "github_issue",
 		Subsystem: "prometheus_exporter",
-		Name:      "pull_request_count",
-		Help:      "Number of Pull Requests",
+		Name:      "issue_count",
+		Help:      "Number of issues",
 	},
-		[]string{"number", "label", "author", "reviewer", "repo"},
+		[]string{"number", "label", "author", "repo"},
 	)
 )
 
 func main() {
 	const interval = 10
 
-	prometheus.MustRegister(PullRequestCount)
+	prometheus.MustRegister(IssueCount)
 
 	http.Handle("/metrics", promhttp.Handler())
 
@@ -70,36 +69,29 @@ func snapshot() error {
 
 	repositoryList := parseRepositories(repositories)
 
-	prs, err := getPullRequests(githubToken, repositoryList)
+	issues, err := getIssues(githubToken, repositoryList)
 	if err != nil {
-		return fmt.Errorf("failed to get PullRequests: %w", err)
+		return fmt.Errorf("failed to get Issues: %w", err)
 	}
 
-	prInfos := getPRInfos(prs)
+	issueInfos := getIssueInfos(issues)
 
 	var labelsTag []string
-	var reviewersTag []string
 
-	for _, prInfo := range prInfos {
+	for _, issueInfo := range issueInfos {
 		labelsTag = []string{}
-		reviewersTag = []string{}
 
-		for _, label := range prInfo.Labels {
+		for _, label := range issueInfo.Labels {
 			labelsTag = append(labelsTag, *label.Name)
 		}
 
-		for _, reviewer := range prInfo.RequestedReviewers {
-			reviewersTag = append(reviewersTag, *reviewer.Login)
-		}
-
 		labels := prometheus.Labels{
-			"number":   strconv.Itoa(*prInfo.Number),
-			"label":    strings.Join(labelsTag, ","),
-			"author":   *prInfo.User,
-			"reviewer": strings.Join(reviewersTag, ","),
-			"repo":     prInfo.Repo,
+			"number": strconv.Itoa(*issueInfo.Number),
+			"label":  strings.Join(labelsTag, ","),
+			"author": *issueInfo.User,
+			"repo":   issueInfo.Repo,
 		}
-		PullRequestCount.With(labels).Set(1)
+		IssueCount.With(labels).Set(1)
 	}
 
 	return nil
@@ -114,7 +106,7 @@ func readGithubConfig() (string, error) {
 	return githubToken, nil
 }
 
-func getPullRequests(githubToken string, githubRepositories []string) ([]*github.PullRequest, error) {
+func getIssues(githubToken string, githubRepositories []string) ([]*github.Issue, error) {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: githubToken},
 	)
@@ -123,21 +115,21 @@ func getPullRequests(githubToken string, githubRepositories []string) ([]*github
 
 	client := github.NewClient(tc)
 
-	prs := []*github.PullRequest{}
+	issues := []*github.Issue{}
 
 	for _, githubRepository := range githubRepositories {
 		repo := strings.Split(githubRepository, "/")
 		org := repo[0]
 		name := repo[1]
-		prsInRepo, _, err := client.PullRequests.List(ctx, org, name, nil)
+		issuesInRepo, _, err := client.Issues.ListByRepo(ctx, org, name, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get GitHub Pull Requests: %w", err)
+			return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
 		}
 
-		prs = append(prs, prsInRepo...)
+		issues = append(issues, issuesInRepo...)
 	}
 
-	return prs, nil
+	return issues, nil
 }
 
 func getRepositories() (string, error) {
@@ -153,20 +145,19 @@ func parseRepositories(repositories string) []string {
 	return strings.Split(repositories, ",")
 }
 
-func getPRInfos(prs []*github.PullRequest) []PR {
-	prInfos := []PR{}
+func getIssueInfos(issues []*github.Issue) []Issue {
+	issueInfos := []Issue{}
 
-	for _, pr := range prs {
-		repos := strings.Split(*pr.URL, "/")
+	for _, issue := range issues {
+		repos := strings.Split(*issue.URL, "/")
 
-		prInfos = append(prInfos, PR{
-			Number:             pr.Number,
-			Labels:             pr.Labels,
-			User:               pr.User.Login,
-			RequestedReviewers: pr.RequestedReviewers,
-			Repo:               repos[4] + "/" + repos[5],
+		issueInfos = append(issueInfos, Issue{
+			Number: issue.Number,
+			Labels: issue.Labels,
+			User:   issue.User.Login,
+			Repo:   repos[4] + "/" + repos[5],
 		})
 	}
 
-	return prInfos
+	return issueInfos
 }
