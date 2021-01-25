@@ -36,11 +36,13 @@ $ docker run -e GITHUB_TOKEN="${GITHUB_TOKEN}" -e GITHUB_REPOSITORIES="${GITHUB_
 ## Metrics
 
 ```
-$ curl -s localhost:8080/metrics | grep github_pr_prometheus_exporter_pull_request_count
-# HELP github_pr_prometheus_exporter_pull_request_count Number of Pull Requests
-# TYPE github_pr_prometheus_exporter_pull_request_count gauge
-github_pr_prometheus_exporter_pull_request_count{author="chaspy",label="",number="1470",repo="quipper/kubernetes-clusters",reviewer=""} 1
-github_pr_prometheus_exporter_pull_request_count{author="dependabot-preview[bot]",label="dependencies,security",number="5563",repo="quipper/server-templates",reviewer=""} 1
-github_pr_prometheus_exporter_pull_request_count{author="renovate[bot]",label="renovate:datadog,renovate:datadog/2.6.13",number="1798",repo="quipper/kubernetes-clusters",reviewer="chaspy"} 1
-github_pr_prometheus_exporter_pull_request_count{author="renovate[bot]",label="renovate:ingress-nginx,renovate:ingress-nginx/3.20.1",number="1739",repo="quipper/kubernetes-clusters",reviewer="chaspy"} 1
+$ curl -s localhost:8080/metrics | grep github_issue_prometheus_exporter_issue_count
+# HELP github_issue_prometheus_exporter_issue_count Number of issues
+# TYPE github_issue_prometheus_exporter_issue_count gauge
+github_issue_prometheus_exporter_issue_count{author="chaspy",label="SRE",number="27193",repo="quipper/quipper"} 1
 ```
+## Datadog Autodiscovery
+
+If you use Datadog, you can use [Kubernetes Integration Autodiscovery](https://docs.datadoghq.com/agent/kubernetes/integrations/?tab=kubernetes) feature.
+
+
