@@ -15,6 +15,10 @@ The target repositories are specified by GITHUB_REPOSITORIES environment varibal
 
 >export GITHUB_REPOSITORIES="chaspy/github-issue-prometheus-exporter,chaspy/favsearch"
 
+Specify `GITHUB_LABEL` to get issues.
+
+>export GITHUB_LABEL="SRE"
+
 ## How to run
 
 ### Local
