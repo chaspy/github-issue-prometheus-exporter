@@ -121,7 +121,10 @@ func getIssues(githubToken string, githubRepositories []string) ([]*github.Issue
 		repo := strings.Split(githubRepository, "/")
 		org := repo[0]
 		name := repo[1]
-		issuesInRepo, _, err := client.Issues.ListByRepo(ctx, org, name, nil)
+		issueListByRepoOptions := github.IssueListByRepoOptions{
+			Labels: []string{"SRE"},
+		}
+		issuesInRepo, _, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
 		}
