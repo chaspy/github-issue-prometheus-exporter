@@ -1,9 +1,9 @@
-# github-pr-prometheus-exporter
-Prometheus Exporter for Github Pull Requests
+# github-issue-prometheus-exporter
+Prometheus Exporter for Github Issues
 
 ## Preparation
 
-Copy .envrc and load it.
+Copy .envrc.sample and load it.
 
 ```
 $ cp .envrc.sample .envrc
@@ -13,7 +13,7 @@ $ # source .envrc
 
 The target repositories are specified by GITHUB_REPOSITORIES environment varibales, that should be written in org/reponame, separated by commas.
 
->export GITHUB_REPOSITORIES="chaspy/datadog-github-pr,chaspy/favsearch"
+>export GITHUB_REPOSITORIES="chaspy/github-issue-prometheus-exporter,chaspy/favsearch"
 
 ## How to run
 
@@ -25,12 +25,12 @@ $ go run main.go
 
 ### Binary
 
-Get the binary file from [Releases](https://github.com/chaspy/datadog-github-pr/releases) and run it.
+Get the binary file from [Releases](https://github.com/chaspy/github-issue-prometheus-exporter/releases) and run it.
 
 ### Docker
 
 ```
-$ docker run -e GITHUB_TOKEN="${GITHUB_TOKEN}" -e GITHUB_REPOSITORIES="${GITHUB_REPOSITORIES}" chaspy/github-pr-ptometheus-exporter:v0.1.0
+$ docker run -e GITHUB_TOKEN="${GITHUB_TOKEN}" -e GITHUB_REPOSITORIES="${GITHUB_REPOSITORIES}" chaspy/github-issue-ptometheus-exporter:v0.1.0
 ```
 
 ## Metrics
