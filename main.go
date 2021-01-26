@@ -81,13 +81,11 @@ func snapshot() error {
 
 	issueInfos := getIssueInfos(issues)
 
-	var labelsTag []string
-
 	for _, issueInfo := range issueInfos {
-		labelsTag = []string{}
+		labelsTag := make([]string, len(issueInfo.Labels))
 
-		for _, label := range issueInfo.Labels {
-			labelsTag = append(labelsTag, *label.Name)
+		for i, label := range issueInfo.Labels {
+			labelsTag[i] = *label.Name
 		}
 
 		labels := prometheus.Labels{
@@ -163,17 +161,17 @@ func parseRepositories(repositories string) []string {
 }
 
 func getIssueInfos(issues []*github.Issue) []Issue {
-	issueInfos := []Issue{}
+	issueInfos := make([]Issue, len(issues))
 
-	for _, issue := range issues {
+	for i, issue := range issues {
 		repos := strings.Split(*issue.URL, "/")
 
-		issueInfos = append(issueInfos, Issue{
+		issueInfos[i] = Issue{
 			Number: issue.Number,
 			Labels: issue.Labels,
 			User:   issue.User.Login,
 			Repo:   repos[4] + "/" + repos[5],
-		})
+		}
 	}
 
 	return issueInfos
