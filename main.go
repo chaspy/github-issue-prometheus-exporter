@@ -67,10 +67,7 @@ func snapshot() error {
 		return fmt.Errorf("failed to read Datadog Config: %w", err)
 	}
 
-	label, err := getLabelForFilter()
-	if err != nil {
-		return fmt.Errorf("failed to get label: %w", err)
-	}
+	label := getLabelForFilter()
 
 	repositories, err := getRepositories()
 	if err != nil {
@@ -176,13 +173,13 @@ func getRepositories() (string, error) {
 	return githubRepositories, nil
 }
 
-func getLabelForFilter() (string, error) {
+func getLabelForFilter() string {
 	githubLabel := os.Getenv("GITHUB_LABEL")
 	if len(githubLabel) == 0 {
-		return "", fmt.Errorf("missing environment variable: GITHUB_LABEL")
+		return ""
 	}
 
-	return githubLabel, nil
+	return githubLabel
 }
 
 func parseRepositories(repositories string) []string {
