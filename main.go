@@ -144,15 +144,24 @@ func getIssues(githubToken string, githubRepositories []string, label string) ([
 		repo := strings.Split(githubRepository, "/")
 		org := repo[0]
 		name := repo[1]
+		const perPage = 100
 		issueListByRepoOptions := github.IssueListByRepoOptions{
-			Labels: []string{label},
-		}
-		issuesInRepo, _, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
+			Labels:      []string{label},
+			ListOptions: github.ListOptions{PerPage: perPage},
 		}
 
-		issues = append(issues, issuesInRepo...)
+		for {
+			issuesInRepo, resp, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
+			}
+
+			issues = append(issues, issuesInRepo...)
+			if resp.NextPage == 0 {
+				break
+			}
+			issueListByRepoOptions.Page = resp.NextPage
+		}
 	}
 
 	return issues, nil
