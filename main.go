@@ -60,6 +60,8 @@ func main() {
 }
 
 func snapshot() error {
+	IssueCount.Reset()
+
 	githubToken, err := readGithubConfig()
 	if err != nil {
 		return fmt.Errorf("failed to read Datadog Config: %w", err)
