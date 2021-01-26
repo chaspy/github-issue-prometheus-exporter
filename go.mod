@@ -1,4 +1,4 @@
-module github.com/chaspy/github-pr-prometheus-exporter
+module github.com/chaspy/github-issue-prometheus-exporter
 
 go 1.15
 
