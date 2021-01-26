@@ -18,4 +18,8 @@ FROM alpine:3.13.0 as runner
 
 COPY --from=builder /go/bin/github-issue-prometheus-exporter /app/github-issue-prometheus-exporter
 
+RUN adduser -D -S -H exporter
+
+USER exporter
+
 ENTRYPOINT ["/app/github-issue-prometheus-exporter"]
