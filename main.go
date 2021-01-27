@@ -17,9 +17,9 @@ import (
 )
 
 type Issue struct {
-	Number *int
+	Number int
 	Labels []github.Label
-	User   *string
+	User   string
 	Repo   string
 }
 
@@ -91,9 +91,9 @@ func snapshot() error {
 		}
 
 		labels := prometheus.Labels{
-			"number": strconv.Itoa(*issueInfo.Number),
+			"number": strconv.Itoa(issueInfo.Number),
 			"label":  strings.Join(labelsTag, ","),
-			"author": *issueInfo.User,
+			"author": issueInfo.User,
 			"repo":   issueInfo.Repo,
 		}
 		IssueCount.With(labels).Set(1)
@@ -193,9 +193,9 @@ func getIssueInfos(issues []*github.Issue) []Issue {
 		repos := strings.Split(*issue.URL, "/")
 
 		issueInfos[i] = Issue{
-			Number: issue.Number,
+			Number: issue.GetNumber(),
 			Labels: issue.Labels,
-			User:   issue.User.Login,
+			User:   issue.User.GetLogin(),
 			Repo:   repos[4] + "/" + repos[5],
 		}
 	}
