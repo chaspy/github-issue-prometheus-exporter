@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,11 @@ type Issue struct {
 	Labels []*github.Label
 	User   string
 	Repo   string
+}
+
+type Repo struct {
+	Owner string
+	Name  string
 }
 
 var (
@@ -56,7 +62,10 @@ func core() error {
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub repository name: %w", err)
 	}
-	repositoryList := parseRepositories(repositories)
+	repositoryList, err := parseRepositories(repositories)
+	if err != nil {
+		return err
+	}
 
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: githubToken},
@@ -85,7 +94,7 @@ func core() error {
 	return http.ListenAndServe(":8080", nil)
 }
 
-func snapshot(label string, repositoryList []string, client *github.Client) error {
+func snapshot(label string, repositoryList []Repo, client *github.Client) error {
 	IssueCount.Reset()
 
 	issues, err := getIssues(repositoryList, label, client)
@@ -138,15 +147,12 @@ func readGithubConfig() (string, error) {
 	return githubToken, nil
 }
 
-func getIssues(githubRepositories []string, label string, client *github.Client) ([]*github.Issue, error) {
+func getIssues(githubRepositories []Repo, label string, client *github.Client) ([]*github.Issue, error) {
 	ctx := context.Background()
 
 	issues := []*github.Issue{}
 
 	for _, githubRepository := range githubRepositories {
-		repo := strings.Split(githubRepository, "/")
-		org := repo[0]
-		name := repo[1]
 		const perPage = 100
 		issueListByRepoOptions := github.IssueListByRepoOptions{
 			Labels:      []string{label},
@@ -154,7 +160,7 @@ func getIssues(githubRepositories []string, label string, client *github.Client)
 		}
 
 		for {
-			issuesInRepo, resp, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
+			issuesInRepo, resp, err := client.Issues.ListByRepo(ctx, githubRepository.Owner, githubRepository.Name, &issueListByRepoOptions)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
 			}
@@ -188,8 +194,20 @@ func getLabelForFilter() string {
 	return githubLabel
 }
 
-func parseRepositories(repositories string) []string {
-	return strings.Split(repositories, ",")
+func parseRepositories(repositories string) ([]Repo, error) {
+	repos := strings.Split(repositories, ",")
+	arr := make([]Repo, len(repos))
+	for i, repo := range repos {
+		a := strings.Split(repo, "/")
+		if len(a) != 2 { //nolint:gomnd
+			return nil, errors.New("repository is invalid: " + repo)
+		}
+		arr[i] = Repo{
+			Owner: a[0],
+			Name:  a[1],
+		}
+	}
+	return arr, nil
 }
 
 func getIssueInfos(issues []*github.Issue) []Issue {
