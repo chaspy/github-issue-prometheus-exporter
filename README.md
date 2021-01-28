@@ -34,7 +34,7 @@ Get the binary file from [Releases](https://github.com/chaspy/github-issue-prome
 ### Docker
 
 ```
-$ docker run -e GITHUB_TOKEN="${GITHUB_TOKEN}" -e GITHUB_REPOSITORIES="${GITHUB_REPOSITORIES}" chaspy/github-issue-ptometheus-exporter:v0.1.0
+$ docker run -e GITHUB_TOKEN="${GITHUB_TOKEN}" -e GITHUB_REPOSITORIES="${GITHUB_REPOSITORIES}" chaspy/github-issue-prometheus-exporter:v0.1.0
 ```
 
 ## Metrics
