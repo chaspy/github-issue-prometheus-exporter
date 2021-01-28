@@ -36,9 +36,15 @@ var (
 )
 
 func main() {
+	if err := core(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func core() error {
 	interval, err := getInterval()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	prometheus.MustRegister(IssueCount)
@@ -56,7 +62,7 @@ func main() {
 			}
 		}
 	}()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	return http.ListenAndServe(":8080", nil)
 }
 
 func snapshot() error {
