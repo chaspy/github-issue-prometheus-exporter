@@ -58,6 +58,13 @@ func core() error {
 	}
 	repositoryList := parseRepositories(repositories)
 
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubToken},
+	)
+	ctx := context.Background()
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
 	label := getLabelForFilter()
 
 	prometheus.MustRegister(IssueCount)
@@ -69,7 +76,7 @@ func core() error {
 
 		// register metrics as background
 		for range ticker.C {
-			err := snapshot(githubToken, label, repositoryList)
+			err := snapshot(label, repositoryList, client)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -78,10 +85,10 @@ func core() error {
 	return http.ListenAndServe(":8080", nil)
 }
 
-func snapshot(githubToken, label string, repositoryList []string) error {
+func snapshot(label string, repositoryList []string, client *github.Client) error {
 	IssueCount.Reset()
 
-	issues, err := getIssues(githubToken, repositoryList, label)
+	issues, err := getIssues(repositoryList, label, client)
 	if err != nil {
 		return fmt.Errorf("failed to get Issues: %w", err)
 	}
@@ -131,14 +138,8 @@ func readGithubConfig() (string, error) {
 	return githubToken, nil
 }
 
-func getIssues(githubToken string, githubRepositories []string, label string) ([]*github.Issue, error) {
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
-	)
+func getIssues(githubRepositories []string, label string, client *github.Client) ([]*github.Issue, error) {
 	ctx := context.Background()
-	tc := oauth2.NewClient(ctx, ts)
-
-	client := github.NewClient(tc)
 
 	issues := []*github.Issue{}
 
