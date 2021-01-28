@@ -47,6 +47,19 @@ func core() error {
 		return err
 	}
 
+	githubToken, err := readGithubConfig()
+	if err != nil {
+		return fmt.Errorf("failed to read Datadog Config: %w", err)
+	}
+
+	repositories, err := getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub repository name: %w", err)
+	}
+	repositoryList := parseRepositories(repositories)
+
+	label := getLabelForFilter()
+
 	prometheus.MustRegister(IssueCount)
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -56,7 +69,7 @@ func core() error {
 
 		// register metrics as background
 		for range ticker.C {
-			err := snapshot()
+			err := snapshot(githubToken, label, repositoryList)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -65,22 +78,8 @@ func core() error {
 	return http.ListenAndServe(":8080", nil)
 }
 
-func snapshot() error {
+func snapshot(githubToken, label string, repositoryList []string) error {
 	IssueCount.Reset()
-
-	githubToken, err := readGithubConfig()
-	if err != nil {
-		return fmt.Errorf("failed to read Datadog Config: %w", err)
-	}
-
-	label := getLabelForFilter()
-
-	repositories, err := getRepositories()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub repository name: %w", err)
-	}
-
-	repositoryList := parseRepositories(repositories)
 
 	issues, err := getIssues(githubToken, repositoryList, label)
 	if err != nil {
