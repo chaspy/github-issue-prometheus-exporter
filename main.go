@@ -18,7 +18,7 @@ import (
 
 type Issue struct {
 	Number int
-	Labels []github.Label
+	Labels []*github.Label
 	User   string
 	Repo   string
 }
