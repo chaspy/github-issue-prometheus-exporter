@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,6 +24,11 @@ type Issue struct {
 	Repo   string
 }
 
+type Repo struct {
+	Owner string
+	Name  string
+}
+
 var (
 	//nolint:gochecknoglobals
 	IssueCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -36,10 +42,39 @@ var (
 )
 
 func main() {
-	interval, err := getInterval()
-	if err != nil {
+	if err := core(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func core() error {
+	interval, err := getInterval()
+	if err != nil {
+		return err
+	}
+
+	githubToken, err := readGithubConfig()
+	if err != nil {
+		return fmt.Errorf("failed to read Datadog Config: %w", err)
+	}
+
+	repositories, err := getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub repository name: %w", err)
+	}
+	repositoryList, err := parseRepositories(repositories)
+	if err != nil {
+		return err
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubToken},
+	)
+	ctx := context.Background()
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	label := getLabelForFilter()
 
 	prometheus.MustRegister(IssueCount)
 
@@ -50,33 +85,19 @@ func main() {
 
 		// register metrics as background
 		for range ticker.C {
-			err := snapshot()
+			err := snapshot(label, repositoryList, client)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	}()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	return http.ListenAndServe(":8080", nil)
 }
 
-func snapshot() error {
+func snapshot(label string, repositoryList []Repo, client *github.Client) error {
 	IssueCount.Reset()
 
-	githubToken, err := readGithubConfig()
-	if err != nil {
-		return fmt.Errorf("failed to read Datadog Config: %w", err)
-	}
-
-	label := getLabelForFilter()
-
-	repositories, err := getRepositories()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub repository name: %w", err)
-	}
-
-	repositoryList := parseRepositories(repositories)
-
-	issues, err := getIssues(githubToken, repositoryList, label)
+	issues, err := getIssues(repositoryList, label, client)
 	if err != nil {
 		return fmt.Errorf("failed to get Issues: %w", err)
 	}
@@ -126,21 +147,12 @@ func readGithubConfig() (string, error) {
 	return githubToken, nil
 }
 
-func getIssues(githubToken string, githubRepositories []string, label string) ([]*github.Issue, error) {
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
-	)
+func getIssues(githubRepositories []Repo, label string, client *github.Client) ([]*github.Issue, error) {
 	ctx := context.Background()
-	tc := oauth2.NewClient(ctx, ts)
-
-	client := github.NewClient(tc)
 
 	issues := []*github.Issue{}
 
 	for _, githubRepository := range githubRepositories {
-		repo := strings.Split(githubRepository, "/")
-		org := repo[0]
-		name := repo[1]
 		const perPage = 100
 		issueListByRepoOptions := github.IssueListByRepoOptions{
 			Labels:      []string{label},
@@ -148,7 +160,7 @@ func getIssues(githubToken string, githubRepositories []string, label string) ([
 		}
 
 		for {
-			issuesInRepo, resp, err := client.Issues.ListByRepo(ctx, org, name, &issueListByRepoOptions)
+			issuesInRepo, resp, err := client.Issues.ListByRepo(ctx, githubRepository.Owner, githubRepository.Name, &issueListByRepoOptions)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get GitHub Issues: %w", err)
 			}
@@ -182,8 +194,20 @@ func getLabelForFilter() string {
 	return githubLabel
 }
 
-func parseRepositories(repositories string) []string {
-	return strings.Split(repositories, ",")
+func parseRepositories(repositories string) ([]Repo, error) {
+	repos := strings.Split(repositories, ",")
+	arr := make([]Repo, len(repos))
+	for i, repo := range repos {
+		a := strings.Split(repo, "/")
+		if len(a) != 2 { //nolint:gomnd
+			return nil, errors.New("repository is invalid: " + repo)
+		}
+		arr[i] = Repo{
+			Owner: a[0],
+			Name:  a[1],
+		}
+	}
+	return arr, nil
 }
 
 func getIssueInfos(issues []*github.Issue) []Issue {
