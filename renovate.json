@@ -14,11 +14,16 @@
     {
       "managers": ["gomod"],
       "packagePatterns": [".*"],
-      "updateTypes": ["minor", "patch", "pin","digest"],
+      "updateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
       "postUpdateOptions": [
         "gomodTidy"
       ]
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "automerge": true,
+      "matchUpdateTypes": ["minor", "patch", "pin"]
     }
   ]
 }
