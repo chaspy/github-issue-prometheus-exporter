@@ -1,6 +1,6 @@
 module github.com/chaspy/github-issue-prometheus-exporter
 
-go 1.15
+go 1.19
 
 require (
 	github.com/google/go-github/v35 v35.3.0
